@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M5Core2 Bluetooth Control</title>
+</head>
+<body>
+    <h1>M5Core2 Control</h1>
+    <button id="connect">Connect to M5Core2</button>
+
+    <script>
+        let bluetoothDevice;
+        let characteristic;
+
+        document.getElementById('connect').addEventListener('click', async () => {
+    try {
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+            filters: [{ name: 'M5Core2' }]
+        });
+
+        const server = await bluetoothDevice.gatt.connect();
+        const service = await server.getPrimaryService('00001800-0000-1000-8000-00805f9b34fb'); // サービスUUIDは適宜変更
+        characteristic = await service.getCharacteristic('00002a00-0000-1000-8000-00805f9b34fb'); // キャラクタリスティックUUIDは適宜変更
+        console.log('Connected to M5Core2');
+
+        // 接続状態をコンソールに表示
+        console.log(`Bluetooth connected: ${bluetoothDevice.gatt.connected}`);
+
+        // 接続状態の変化を監視
+        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+    } catch (error) {
+        console.error(error);
+    }
+});
+
+function onDisconnected() {
+    console.log('Disconnected from M5Core2');
+}
+
+
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' && characteristic) {
+                const value = new Uint8Array([32]); // スペースのASCIIコード
+                characteristic.writeValue(value).then(() => {
+                    console.log('Sent space character');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
