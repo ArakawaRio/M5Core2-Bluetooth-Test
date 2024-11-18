@@ -8,19 +8,22 @@
 <body>
     <h1>M5Core2 Control</h1>
     <button id="connect">Connect to M5Core2</button>
+    <button id="vibrate">Send Vibrate Command</button>
 
     <script>
         let bluetoothDevice;
         let characteristic;
 
-        const serviceUUID = '00001800-0000-1000-8000-00805f9b34fb';
-        const characteristicUUID = '00002a00-0000-1000-8000-00805f9b34fb';
+        // 正しいUUIDを設定
+        const serviceUUID = '12345678-1234-5678-1234-56789abcdef0'; // Arduino側のサービスUUID
+        const characteristicUUID = 'abcdef01-1234-5678-1234-56789abcdef0'; // Arduino側のキャラクタリスティックUUID
 
+        // Bluetooth接続ボタンの処理
         document.getElementById('connect').addEventListener('click', async () => {
             try {
                 console.log('Requesting Bluetooth device...');
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'M5Core2' }],
+                    filters: [{ name: 'M5Core2' }], // デバイス名を指定
                     optionalServices: [serviceUUID]
                 });
 
@@ -34,30 +37,49 @@
                 characteristic = await service.getCharacteristic(characteristicUUID);
 
                 console.log('Connected to M5Core2');
-
-                // 接続状態をコンソールに表示
                 console.log(`Bluetooth connected: ${bluetoothDevice.gatt.connected}`);
 
-                // 接続状態の変化を監視
+                // デバイスの切断イベントを監視
                 bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error during connection:', error);
             }
         });
 
+        // デバイス切断時の処理
         function onDisconnected() {
             console.log('Disconnected from M5Core2');
+            characteristic = null; // 切断後はキャラクタリスティックをクリア
         }
 
-        document.addEventListener('keydown', (event) => {
-            if (event.code === 'Space' && characteristic) {
-                console.log('Space key pressed');
+        // 振動コマンドを送信するボタンの処理
+        document.getElementById('vibrate').addEventListener('click', async () => {
+            if (!characteristic) {
+                console.error('Not connected to M5Core2');
+                return;
+            }
+
+            try {
                 const value = new Uint8Array([32]); // スペースのASCIIコード
-                characteristic.writeValue(value).then(() => {
-                    console.log('Sent space character');
-                }).catch(error => {
-                    console.error('Error sending data:', error);
-                });
+                console.log('Sending vibrate command...');
+                await characteristic.writeValue(value);
+                console.log('Vibrate command sent successfully');
+            } catch (error) {
+                console.error('Error sending vibrate command:', error);
+            }
+        });
+
+        // キーボードのスペースキーで振動コマンドを送信
+        document.addEventListener('keydown', async (event) => {
+            if (event.code === 'Space' && characteristic) {
+                try {
+                    const value = new Uint8Array([32]); // スペースのASCIIコード
+                    console.log('Space key pressed, sending vibrate command...');
+                    await characteristic.writeValue(value);
+                    console.log('Vibrate command sent via Space key');
+                } catch (error) {
+                    console.error('Error sending data via Space key:', error);
+                }
             }
         });
     </script>
